@@ -1,0 +1,12 @@
+- name: Configure Ubuntu VM
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update system and install packages
+      apt:
+        update_cache: yes
+        name:
+          - curl
+          - git
+          - nginx
+        state: present
