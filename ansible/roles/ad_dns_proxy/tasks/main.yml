@@ -1,0 +1,23 @@
+---
+- name: Remove existing Samba configuration if it exists
+  file:
+    path: /etc/samba/smb.conf
+    state: absent
+
+- name: Provision Samba AD Domain
+  command: samba-tool domain provision --use-rfc2307 --realm={{ domain }} --domain=EXAMPLE --adminpass={{ samba_admin_password }}
+  args:
+    creates: "/var/lib/samba/private/krb5.conf"
+
+
+- name: Configure BIND9 DNS
+  template:
+    src: named.conf.options.j2
+    dest: /etc/bind/named.conf.options
+  notify: restart bind9
+
+- name: Configure Nginx Proxy
+  template:
+    src: nginx-proxy.conf.j2
+    dest: /etc/nginx/sites-available/default
+  notify: restart nginx

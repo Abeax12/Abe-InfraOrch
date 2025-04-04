@@ -1,0 +1,14 @@
+domain: example.com
+certbot_email: admin@example.com
+mailman_admin_email: admin@example.com
+mailman_admin_password: "MailmanPass123!"
+
+mailman_admin_email: "admin@example.com"  # Replace with your domain
+
+#postgres_db_password: "!vault | ..."
+mailman_admin_password: "!vault | ..."
+
+postgres_db_password: "!vault | $ANSIBLE_VAULT;1.1;AES256;..."
+
+mailman_version: "3.3.7-1"
+mailman_checksum: "a1b2c3d4..." 

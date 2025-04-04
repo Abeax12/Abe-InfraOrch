@@ -1,0 +1,13 @@
+- name: Update package lists
+  apt:
+    update_cache: yes
+
+- name: Upgrade all packages
+  apt:
+    upgrade: dist
+    autoremove: yes
+
+- name: Install common tools
+  apt:
+    name: "{{ common_packages }}"
+    state: present

@@ -1,0 +1,51 @@
+# roles/mail_news/templates/postfix-main.cf.j2
+# Managed by Ansible - DO NOT EDIT MANUALLY
+
+### Basic Configuration ###
+myhostname = mail.{{ domain }}
+mydomain = {{ domain }}
+myorigin = $mydomain
+inet_interfaces = all
+inet_protocols = ipv4
+
+### Mail Delivery ###
+mydestination = $myhostname, localhost.$mydomain, localhost, $mydomain
+home_mailbox = Maildir/
+virtual_alias_maps = hash:/etc/postfix/virtual
+
+### Security Restrictions ###
+smtpd_helo_restrictions = permit_mynetworks, reject_invalid_helo_hostname
+smtpd_sender_restrictions = reject_unknown_sender_domain
+smtpd_recipient_restrictions = 
+    permit_mynetworks,
+    reject_unauth_destination
+
+### TLS Configuration ###
+smtpd_tls_cert_file = /etc/letsencrypt/live/mail.{{ domain }}/fullchain.pem
+smtpd_tls_key_file = /etc/letsencrypt/live/mail.{{ domain }}/privkey.pem
+smtpd_use_tls = yes
+smtpd_tls_session_cache_database = btree:${data_directory}/smtpd_scache
+smtp_tls_session_cache_database = btree:${data_directory}/smtp_scache
+
+### SASL Authentication ###
+smtpd_sasl_type = dovecot
+smtpd_sasl_path = private/auth
+smtpd_sasl_auth_enable = yes
+smtpd_sasl_security_options = noanonymous
+smtpd_sasl_local_domain = $mydomain
+
+### Submission Port (587) ###
+smtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination
+
+### Policy Service Integration ###
+smtpd_milters = inet:localhost:11332
+non_smtpd_milters = inet:localhost:11332
+milter_default_action = accept
+
+### Network Configuration ###
+mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
+relayhost = [smtp.{{ domain }}]:587  {# If using external relay #}
+
+### Performance ###
+message_size_limit = 52428800  # 50MB
+mailbox_size_limit = 0

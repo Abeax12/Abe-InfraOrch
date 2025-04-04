@@ -1,0 +1,11 @@
+- name: Download from Debian mirror
+  get_url:
+    url: "https://ftp.debian.org/debian/pool/main/m/mailman3/mailman3_{{ mailman_version }}_all.deb"
+    dest: /tmp/mailman3.deb
+    checksum: "sha256:{{ mailman_checksum }}"
+  when: "'mailman3' not in ansible_facts.packages"
+
+- name: Install .deb package
+  apt:
+    deb: /tmp/mailman3.deb
+  when: "'mailman3' not in ansible_facts.packages"

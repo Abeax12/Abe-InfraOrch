@@ -1,0 +1,14 @@
+- name: Install Elastic Stack components
+  apt:
+    name: "{{ monitoring_packages }}"
+    state: present
+
+- name: Enable services
+  systemd:
+    name: "{{ item }}"
+    enabled: yes
+    state: started
+  loop:
+    - elasticsearch
+    - kibana
+    - logstash

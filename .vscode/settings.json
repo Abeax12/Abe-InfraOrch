@@ -1,0 +1,8 @@
+{
+    "terraform.languageServer.enable": true,
+    "files.associations": {
+      "*.yml": "ansible"
+    },
+    "ansible.python.interpreterPath": "/usr/bin/python3"
+  }
+  

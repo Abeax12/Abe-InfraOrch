@@ -1,0 +1,158 @@
+---
+# roles/mail_news/tasks/main.yml
+- name: Validate required variables
+  assert:
+    that:
+      - postgres_db_password is defined
+      - mailman_admin_email is defined
+      - mailman_admin_password is defined
+    msg: "Missing required variables. Check group_vars/all.yml"
+  tags: always
+
+- name: Clean up potentially broken repos
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/mailman3.list
+    state: absent
+  ignore_errors: yes
+
+- name: Add PostgreSQL repository
+  ansible.builtin.apt_repository:
+    repo: "deb http://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+    filename: postgresql
+    state: present
+    update_cache: no
+
+- name: Add PostgreSQL repository
+  apt_repository:
+    repo: "deb http://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+    state: present
+    filename: postgresql
+
+- name: Import PostgreSQL signing key
+  apt_key:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present
+
+- name: Update package lists
+  apt:
+    update_cache: yes
+
+- name: Install PostgreSQL 14
+  apt:
+    name:
+      - postgresql-14
+      - postgresql-client-14
+    state: present
+
+- name: Ensure PostgreSQL service is running
+  systemd:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- name: Create PostgreSQL user for Mailman
+  become_user: postgres
+  community.postgresql.postgresql_user:
+    name: "mailman"
+    password: "{{ postgres_db_password }}"
+    encrypted: yes
+    state: present
+  no_log: true  # Hide password from logs
+
+- name: Create Mailman database
+  become_user: postgres
+  community.postgresql.postgresql_db:
+    name: mailman
+    owner: mailman
+    encoding: UTF-8
+    state: present
+
+- name: Configure Mailman database connection
+  template:
+    src: "mailman.cfg.j2"
+    dest: "/etc/mailman3/mailman.cfg"
+    owner: mailman
+    group: mailman
+    mode: 0640
+  vars:
+    db_user: "{{ mailman_db_user }}"
+    db_pass: "{{ postgres_db_password }}"
+    db_name: "{{ mailman_db_name }}"
+
+- name: Install Python dependencies
+  pip:
+    name:
+      - mailman
+      - mailman-hyperkitty
+      - postorius
+    virtualenv: /opt/mailman3
+    virtualenv_python: python3
+
+- name: Create Mailman3 directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: mailman
+    group: mailman
+    mode: 0755
+  loop:
+    - /var/lib/mailman3
+    - /var/log/mailman3
+    - /var/lib/mailman3/queue
+    - /var/lib/mailman3/data
+
+- name: Deploy Mailman configuration
+  template:
+    src: mailman.cfg.j2
+    dest: /etc/mailman3/mailman.cfg
+    owner: mailman
+    group: mailman
+    mode: 0640
+  vars:
+    db_pass: "{{ postgres_db_password }}"
+
+- name: Initialize database schema
+  command: "/opt/mailman3/bin/mailman -C /etc/mailman3/mailman.cfg upgrade"
+  become: yes
+  become_user: mailman
+  args:
+    creates: /var/lib/mailman3/data/mailman.db
+  environment:
+    MAILMAN_CONFIG_FILE: /etc/mailman3/mailman.cfg
+
+- name: Install DNS troubleshooting tools
+  apt:
+    name:
+      - dnsutils
+      - curl
+    state: present
+
+- name: Add Mailman3 repository (DNS-safe method)
+  block:
+    - name: Create key directory
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: 0755
+
+    - name: Download key via IP address
+      get_url:
+        url: http://185.199.109.153/key.gpg  # GitHub RAW IP fallback
+        dest: /etc/apt/keyrings/mailman3.gpg
+        mode: 0644
+      register: key_download
+      until: key_download is succeeded
+      retries: 3
+      delay: 5
+
+    - name: Add repository
+      apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/mailman3.gpg] https://apt.mailman3.org/debian {{ ansible_distribution_release }} main"
+        state: present
+        filename: mailman3
+
+  rescue:
+    - name: Install from backports
+      apt:
+        name: mailman3/backports
+        state: present

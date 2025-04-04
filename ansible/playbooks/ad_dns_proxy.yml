@@ -1,0 +1,8 @@
+---
+- name: Configure Active Directory, DNS, and Proxy
+  hosts: ad_dns_proxy
+  become: true
+  vars_files:
+    - group_vars/all.yml
+  roles:
+    - role: /mnt/c/Projects/Abe-InfraOrch/ansible/roles/ad_dns_proxy

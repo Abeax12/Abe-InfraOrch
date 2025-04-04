@@ -1,0 +1,145 @@
+---
+- name: Configure Mail Services
+  hosts: mail_services
+  become: true
+  vars_files:
+    - group_vars/all.yml
+
+  roles:
+    - role: /mnt/c/Projects/Abe-InfraOrch/ansible/roles/mail_news
+  pre_tasks:
+    - name: Install Python3 and base dependencies
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - virtualenv
+          - postgresql
+          - libmailutils-dev
+        state: present
+
+  tasks:
+    - name: Install Postfix + Dovecot
+      apt:
+        name:
+          - postfix
+          - dovecot-core
+          - dovecot-imapd
+          - dovecot-lmtpd
+        state: present
+        update_cache: yes
+      notify: restart postfix
+
+    - name: Configure Postfix
+      template:
+        src: ../roles/mail_news/templates/postfix-main.cf.j2
+        dest: /etc/postfix/main.cf
+      notify: restart postfix
+ 
+    - name: Download packages manually
+      get_url:
+        url: "https://downloads.mailman3.org/debian/{{ ansible_distribution_release }}/mailman3_3.3.7-1_all.deb"
+        dest: /tmp/mailman3.deb
+
+    - name: Install downloaded package
+      apt:
+        deb: /tmp/mailman3.deb
+
+    - name: Initialize Mailman3 database
+      command: mailman info
+      changed_when: false
+
+    - name: Create Mailman3 site owner
+      command: >
+        mailman create_site --force
+        --siteowner {{ mailman_admin_email }}
+        --password {{ mailman_site_password }}
+      args:
+        creates: /var/lib/mailman3/data/mailman.db
+
+    - name: Create Mailman3 list
+      command: >
+        mailman create --force
+        --owner {{ mailman_admin_email }}
+        --password {{ mailman_admin_password }}
+        mailman
+      args:
+        creates: /var/lib/mailman3/lists/mailman
+
+    - name: Install Rspamd + ClamAV
+      apt:
+        name:
+          - rspamd
+          - clamav
+          - clamav-daemon
+          - clamav-unofficial-sigs
+        state: present
+        update_cache: yes
+
+    - name: Install INN News Server
+      apt:
+        name: inn
+        state: present
+        update_cache: yes
+
+    - name: Configure INN
+      template:
+        src: ../roles/mail_news/templates/inn.conf.j2
+        dest: /etc/inn/inn.conf
+      notify: restart inn
+
+    - name: Install Certbot for SSL
+      apt:
+        name: 
+          - certbot
+          - python3-certbot-nginx
+        state: present
+
+    - name: Generate SSL certificate
+      community.crypto.acme_certificate:
+        account_email: "{{ certbot_email }}"
+        acme_version: 2
+        challenge: http-01
+        csr: /etc/ssl/csr/mail.{{ domain }}.csr
+        dest: /etc/letsencrypt/live/mail.{{ domain }}/fullchain.pem
+        fullchain_dest: /etc/letsencrypt/live/mail.{{ domain }}/fullchain.pem
+        privkey_dest: /etc/letsencrypt/live/mail.{{ domain }}/privkey.pem
+      notify: reload nginx
+
+    - name: Configure firewall rules
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - 25    # SMTP
+        - 587   # Submission
+        - 993   # IMAPS
+        - 119   # NNTP
+        - 563   # NNTPS
+
+  handlers:
+    - name: restart postfix
+      systemd:
+        name: postfix
+        state: restarted
+
+    - name: restart dovecot
+      systemd:
+        name: dovecot
+        state: restarted
+
+    - name: restart mailman3
+      systemd:
+        name: mailman3
+        state: restarted
+
+    - name: restart inn
+      systemd:
+        name: inn
+        state: restarted
+
+    - name: reload nginx
+      systemd:
+        name: nginx
+        state: reloaded

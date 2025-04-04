@@ -1,0 +1,4 @@
+monitoring_packages:
+  - elasticsearch
+  - kibana
+  - logstash

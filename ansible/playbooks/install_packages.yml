@@ -1,0 +1,11 @@
+- name: Install required packages
+  hosts: all_servers
+  become: yes
+  roles:
+    - common
+
+- name: Install monitoring stack
+  hosts: monitoring
+  become: yes
+  roles:
+    - monitoring

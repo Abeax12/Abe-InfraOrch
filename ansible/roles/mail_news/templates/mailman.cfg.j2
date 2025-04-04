@@ -1,0 +1,18 @@
+[mailman]
+layout: standalone
+site_owner: {{ mailman_admin_email }}
+
+[database]
+class: mailman.database.postgresql.PostgreSQLDatabase
+url: postgresql://{{ db_user | default('mailman') }}:{{ db_pass }}@localhost/{{ db_name | default('mailman') }}
+
+[archiver.hyperkitty]
+class: mailman_hyperkitty.Archiver
+enable: yes
+
+[paths]
+here = /opt/mailman3
+var_dir = /var/lib/mailman3
+log_dir = /var/log/mailman3
+queue_dir = /var/lib/mailman3/queue
+web_dir = /opt/mailman3/web

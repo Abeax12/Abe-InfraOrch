@@ -1,0 +1,68 @@
+---
+- name: Deploy Elastic Stack on Monitoring Server
+  hosts: monitoring
+  become: true
+  vars_files:
+    - ../group_vars/all.yml
+  roles:
+    - role: /mnt/c/Projects/Abe-InfraOrch/ansible/roles/elastic_stack
+  tasks:
+    - name: Install Java
+      apt:
+        name: openjdk-17-jdk
+        state: present
+
+    - name: Add Elastic GPG key
+      apt_key:
+        url: "https://artifacts.elastic.co/GPG-KEY-elasticsearch"
+        state: present
+
+    - name: Add Elastic repository
+      apt_repository:
+        repo: "deb https://artifacts.elastic.co/packages/8.x/apt stable main"
+        state: present
+
+    - name: Install Elasticsearch
+      apt:
+        name: elasticsearch
+        state: present
+
+    - name: Configure Elasticsearch
+      template:
+        src: ../roles/elastic_stack/templates/elasticsearch.yml.j2
+        dest: /etc/elasticsearch/elasticsearch.yml
+      notify: restart elasticsearch
+
+    - name: Install Kibana
+      apt:
+        name: kibana
+        state: present
+
+    - name: Install Filebeat
+      apt:
+        name: filebeat
+        state: present
+
+    - name: Start and enable services
+      systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop:
+        - elasticsearch
+        - kibana
+        - filebeat
+
+    - name: Open firewall ports
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+      loop:
+        - 9200  # Elasticsearch
+        - 5601  # Kibana
+        - 5044  # Filebeat
+  handlers:
+    - name: restart elasticsearch
+      systemd:
+        name: elasticsearch
+        state: restarted

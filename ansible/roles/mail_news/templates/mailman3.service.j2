@@ -1,0 +1,13 @@
+[Unit]
+Description=GNU Mailman 3
+After=network.target postgresql.service redis-server.service
+
+[Service]
+ExecStart=/opt/mailman3/bin/mailman start
+WorkingDirectory=/opt/mailman3
+User=mailman
+Group=mailman
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,33 @@
+---
+- name: Update and manage packages on Debian servers
+  hosts: all_servers
+  become: yes  # Use sudo to run commands as root
+  tasks:
+    - name: Update APT package cache
+      apt:
+        update_cache: yes
+
+    - name: Upgrade all packages to the latest version
+      apt:
+        upgrade: dist  # Or 'yes' for a normal upgrade
+
+    - name: Install specific packages (curl, vim, htop)
+      apt:
+        name:
+          - curl
+          - vim
+          - htop
+        state: present  # 'absent' to remove, 'latest' to install the latest version
+
+    - name: Remove a package (apache2)
+      apt:
+        name: apache2
+        state: absent
+
+    - name: Autoremove unused packages
+      apt:
+        autoremove: yes
+
+    - name: Clean up package cache
+      apt:
+        autoclean: yes

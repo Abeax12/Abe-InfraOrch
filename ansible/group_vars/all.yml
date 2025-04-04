@@ -1,0 +1,15 @@
+domain: example.com
+certbot_email: "admin@example.com"
+mailman_admin_email: "admin@example.com"
+mailman_admin_password: "MailmanPass123!"
+ad_admin_password: "SecureADPass123!"
+samba_admin_password: "StrongPassword123"
+postfix_relayhost: "[smtp.example.com]:587"
+postfix_relay_credentials:
+
+
+mailman_admin_email: "admin@example.com"  # Replace with your domain
+
+#postgres_db_password: "!vault | ..."
+mailman_admin_password: "!vault | ..."
+postgres_db_password: "!vault | $ANSIBLE_VAULT;1.1;AES256;..."

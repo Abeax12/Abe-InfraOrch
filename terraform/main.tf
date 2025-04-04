@@ -1,28 +1,27 @@
-provider "virtualbox" {
-  version = "0.2.1"
+# main.tf
+terraform {
+  required_providers {
+    virtualbox = {
+      source  = "terra-farm/virtualbox"
+      version = "0.2.2-alpha.1"
+    }
+  }
 }
 
-resource "virtualbox_vm" "ubuntu_vm" {
-  name       = "ubuntu-vm"
-  image      = "D:/path/to/ubuntu-18.04.5-live-server-amd64.iso"
-  cpus       = 2
-  memory     = "2048 mib"
-  
-  user_data  = <<EOF
-    #cloud-config
-    password: ubuntu
-    chpasswd: { expire: False }
-    ssh_pwauth: True
-  EOF
+resource "virtualbox_vm" "Infra-node" {
+  name   = "Infra-node"
+  image  = "./ubuntu.ova"
+  cpus   = 24
+  memory = 4096  # Ensure no quotes
+
+  # Workaround: Post-creation memory configuration
+  provisioner "local-exec" {
+    command = "VBoxManage modifyvm '${self.name}' --memory 4096"
+  }
 
   network_adapter {
     type = "nat"
   }
 
-  storage {
-    controller = "IDE"
-    bus        = 0
-    device     = 0
-    size       = "20G"
-  }
+  user_data = file("${path.module}/user-data.yml")
 }
