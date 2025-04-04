@@ -1,5 +1,7 @@
 **Report I: Virtual Environment Setup and Service Configuration**
+
 **Objective:**
+
 The goal of this simulation was to review the decisions made previously regarding the setup of key services within a virtualized environment. The environment was configured using VMware to create three virtual machines (VMs) on my PC. We leveraged Terraform, Ansible, GitHub, and VS Code for various tasks in the setup process.
 
 **Infrastructure Setup:**
